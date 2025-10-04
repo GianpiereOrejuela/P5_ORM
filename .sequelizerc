@@ -1,0 +1,10 @@
+const path = require("path");
+
+module.exports = {
+    // Apunta al nuevo archivo de ENLACE que importará desde 'dist'
+    config: path.resolve(__dirname, "sequelize.config.cjs"),
+
+    // El resto sigue apuntando a 'src' o 'dist' según tu preferencia de flujo
+    "migrations-path": path.resolve("src", "infrastructures", "database", "migrations"),
+    "models-path": path.resolve("src", "infrastructures", "database", "models"),
+};

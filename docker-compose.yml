@@ -1,0 +1,22 @@
+services:
+    P5-DB:
+        image: postgres:15-alpine
+        restart: always
+        container_name: P5-PROJECT
+        environment:
+            POSTGRES_USER: GOrejuelaLluncor
+            POSTGRES_PASSWORD: Lugi@103713
+            POSTGRES_DB: P5-DB
+        ports:
+            - 5433:5432
+        volumes:
+            - ./postgres_data:/var/lib/postgresql/data
+    pgadmin:
+        image: dpage/pgadmin4
+        restart: always
+        container_name: P5-PGADMIN
+        environment:
+            PGADMIN_DEFAULT_EMAIL: hello.gianpiere@gmail.com
+            PGADMIN_DEFAULT_PASSWORD: Lugi@103713
+        ports:
+            - 5050:80
