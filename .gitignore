@@ -118,5 +118,3 @@ Thumbs.db
 # postgres data
 postgres_data/
 
-# developer folder
-src/
