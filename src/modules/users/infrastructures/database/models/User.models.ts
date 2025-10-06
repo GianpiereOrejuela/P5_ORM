@@ -12,12 +12,12 @@ export class Users
     implements CreateUserSchemaType
 {
     // Aseguramos que los atributos estén disponibles como propiedades de instancia
-    public id!: number;
-    public name!: string;
-    public email!: string;
-    public password!: string;
-    public readonly createdAt!: Date;
-    public readonly updatedAt!: Date;
+    declare id: number;
+    declare name: string;
+    declare email: string;
+    declare password: string;
+    declare readonly createdAt: Date;
+    declare readonly updatedAt: Date;
 }
 
 //Inicializar y Definir el Modelo
@@ -40,7 +40,6 @@ Users.init(
         password: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true,
         },
     },
     {

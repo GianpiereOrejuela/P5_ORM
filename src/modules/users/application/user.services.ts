@@ -12,9 +12,11 @@ type UserUpdateAttributes = Partial<UserCreationAttributes>;
  * Servicio para la gestión de usuarios
  */
 export class UserService {
-    private readonly tracker = new OperationTracker(
-        "UserService -  Database connection established"
-    );
+    constructor() {
+        // ✅ Mover el tracker fuera del constructor o hacerlo estático
+        const tracker = new OperationTracker("UserService - Initialization");
+        tracker.info("UserService initialized successfully");
+    }
 
     /**
      * Crea un nuevo usuario en la base de datos
@@ -22,31 +24,30 @@ export class UserService {
      * @returns El usuario creado sin la contraseña
      */
     public async createUser(data: UserCreationAttributes): Promise<Users> {
+        const tracker = new OperationTracker("UserService.createUser");
         try {
-            this.tracker.info(`[INFO] createUser - Input validation started`);
+            tracker.info(`[INFO] createUser - Input validation started`);
             const safeParse = CreateUserSchema.safeParse(data);
             if (!safeParse.success) {
-                this.tracker.error(
-                    `createUser - Input validation failed: ${safeParse.error.message}`
-                );
+                tracker.error(`createUser - Input validation failed: ${safeParse.error.message}`);
                 handlerServiceError(
-                    safeParse.error.message,
+                    safeParse.error, // ✅ Pasar el objeto ZodError completo
                     "createUser - Input validation failed"
                 );
             }
-            this.tracker.info(`createUser - Database query started`);
+            tracker.info(`createUser - Database query started`);
             const hashedPassword = await bcrypt.hash(data.password, 10);
             const userData = { ...data, password: hashedPassword };
             const newUser = await Users.create(userData); // Crear el usuario en la base de datos
-            this.tracker.info(`createUser - Database query finished`);
+            tracker.info(`createUser - Database query finished`);
             const { password: _, ...userWithoutPassword } = newUser.toJSON(); // Eliminar la contraseña del objeto
             return userWithoutPassword as Users;
         } catch (err: any) {
-            this.tracker.error({
+            tracker.error({
                 message: err.message,
                 name: err.name,
             });
-            handlerServiceError(err.message, "createUser - Database query failed");
+            handlerServiceError(err, "createUser - Database query failed"); // ✅ Pasar el objeto completo, no solo el mensaje
         }
     }
 
@@ -60,22 +61,23 @@ export class UserService {
         limit: number = 10,
         offset: number = 0
     ): Promise<{ rows: Users[]; count: number }> {
+        const tracker = new OperationTracker("UserService.findUsers");
         try {
-            this.tracker.info(`findUsers - Database query started`);
+            tracker.info(`findUsers - Database query started`);
             const result = await Users.findAndCountAll({
                 attributes: ["id", "name", "email", "createdAt"],
                 limit: limit,
                 offset: offset,
                 order: [["id", "ASC"]],
             });
-            this.tracker.info(`findUsers - Database query finished`);
+            tracker.info(`findUsers - Database query finished`);
             return result;
         } catch (err: any) {
-            this.tracker.error({
+            tracker.error({
                 message: err.message,
                 name: err.name,
             });
-            handlerServiceError(err.message, "findUsers - Database query failed");
+            handlerServiceError(err, "findUsers - Database query failed"); // ✅ Pasar objeto completo
         }
     }
 
@@ -85,19 +87,20 @@ export class UserService {
      * @returns El usuario encontrado o null si no existe
      */
     public async findByID(id: number): Promise<Users | null> {
+        const tracker = new OperationTracker("UserService.findByID");
         try {
-            this.tracker.info(`findByID - Database query started`);
+            tracker.info(`findByID - Database query started`);
             const result = await Users.findByPk(id, {
                 attributes: ["id", "name", "email", "createdAt"],
             });
-            this.tracker.info(`findByID - Database query finished`);
+            tracker.info(`findByID - Database query finished`);
             return result;
         } catch (err: any) {
-            this.tracker.error({
+            tracker.error({
                 message: err.message,
                 name: err.name,
             });
-            handlerServiceError(err.message, "findByID - Database query failed");
+            handlerServiceError(err, "findByID - Database query failed"); // ✅ Pasar objeto completo
         }
     }
 
@@ -108,20 +111,21 @@ export class UserService {
      * @returns Un array con el número de registros afectados y los registros actualizados
      */
     public async updateUsers(id: number, data: UserUpdateAttributes): Promise<[number, Users[]]> {
+        const tracker = new OperationTracker("UserService.updateUsers");
         try {
-            this.tracker.info(`updateUsers - Database query started`);
+            tracker.info(`updateUsers - Database query started`);
             const [affectedCount, affectedRows] = await Users.update(data, {
                 where: { id },
                 returning: true, //Devuleve los registros actualizados solo para postgresql
             });
-            this.tracker.info(`update - Database query finished`);
+            tracker.info(`update - Database query finished`);
             return [affectedCount, affectedRows];
         } catch (err: any) {
-            this.tracker.error({
+            tracker.error({
                 message: err.message,
                 name: err.name,
             });
-            handlerServiceError(err.message, "update - Database query failed");
+            handlerServiceError(err, "updateUsers - Database query failed"); // ✅ Pasar objeto completo
         }
     }
 
@@ -131,19 +135,20 @@ export class UserService {
      * @returns El número de registros eliminados
      */
     public async deleteUsers(id: number): Promise<number> {
+        const tracker = new OperationTracker("UserService.deleteUsers");
         try {
-            this.tracker.info(`deleteUsers - Database query started`);
+            tracker.info(`deleteUsers - Database query started`);
             const affectedCount = await Users.destroy({
                 where: { id },
             });
-            this.tracker.info(`deleteUsers - Database query finished`);
+            tracker.info(`deleteUsers - Database query finished`);
             return affectedCount;
         } catch (err: any) {
-            this.tracker.error({
+            tracker.error({
                 message: err.message,
                 name: err.name,
             });
-            handlerServiceError(err.message, "deleteUsers - Database query failed");
+            handlerServiceError(err, "deleteUsers - Database query failed"); // ✅ Pasar objeto completo
         }
     }
 }

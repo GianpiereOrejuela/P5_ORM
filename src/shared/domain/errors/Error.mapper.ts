@@ -96,13 +96,13 @@ export function mapDatabaseToCustomError(error: any, operation?: string): Error 
             // Extraer el campo duplicado del error de PostgreSQL
             let field = "campo";
             let value = "valor desconocido";
-            let resource = "Recurso"; // Usar "User" si es solo para usuarios, o pasar como argumento
+            let resource = "Recurso";
 
             if (error.detail) {
                 const match = error.detail.match(/\(([^)]+)\)=\(([^)]+)\)/);
                 if (match) {
-                    field = match[1].trim(); // Campo que causó la violación
-                    value = match[2].trim(); // Valor duplicado
+                    field = match[1].trim();
+                    value = match[2].trim();
                 }
             }
 
@@ -129,22 +129,21 @@ export function mapDatabaseToCustomError(error: any, operation?: string): Error 
             );
         }
 
-        case "42P01": // undefined_table
+        case "42P01":
             return new DatabaseError(`Tabla inexistente: ${error.message}`, error.code, operation);
 
-        case "42703": // undefined_column
+        case "42703":
             return new DatabaseError(
                 `Columna inexistente: ${error.message}`,
                 error.code,
                 operation
             );
 
-        case "08003": // connection_does_not_exist
-        case "08006": // connection_failure
+        case "08003":
+        case "08006":
             return new DatabaseError("Error de conexión a la base de datos", error.code, operation);
 
         default:
-            // Error de PostgreSQL no contemplado (ej: sintaxis, permisos, etc.)
             return new DatabaseError(
                 `Fallo en la operación de base de datos: ${error.message}`,
                 error.code,
@@ -164,9 +163,29 @@ export function handlerServiceError(err: any, operation: string): never {
     let customError: Error;
 
     try {
-        if (err instanceof z.ZodError) {
+        // ✅ Detectar errores de Sequelize
+        if (err.name === "SequelizeUniqueConstraintError") {
+            // Extraer información del error de Sequelize
+            const field = err.errors?.[0]?.path || "campo";
+            const value = err.errors?.[0]?.value || "valor desconocido";
+            const table = err.errors?.[0]?.instance?.constructor?.tableName || "tabla";
+            customError = new DuplicateError(table, field, value);
+        } else if (err.name && err.name.startsWith("Sequelize")) {
+            // Otros errores de Sequelize
+            const pgError = err.original || err.parent;
+            if (pgError && pgError.code) {
+                customError = mapDatabaseToCustomError(pgError, operation);
+            } else {
+                customError = new DatabaseError(
+                    `Error de Sequelize: ${err.message}`,
+                    err.name,
+                    operation
+                );
+            }
+        } else if (err instanceof z.ZodError) {
             customError = mapZodToCustomError(err);
         } else if (err.code && typeof err.code === "string" && err.severity) {
+            // Error nativo de PostgreSQL
             customError = mapDatabaseToCustomError(err, operation);
         } else if (err instanceof ValidationError || err instanceof DatabaseError) {
             customError = err;
@@ -185,6 +204,7 @@ export function handlerServiceError(err: any, operation: string): never {
             operation
         );
     }
+
     tracker.error(customError);
     throw customError;
 }
